@@ -4,23 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Skak Træner</title>
+    <!-- Load scripts BEFORE using them -->
+    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.22.20/babel.min.js"></script>
     <style>
-        body { 
-            margin: 0; 
-            padding: 20px; 
-            font-family: system-ui, sans-serif;
-            background-color: #f0f2f5;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            text-align: center;
-        }
         .board { 
-            display: inline-grid; 
+            display: grid; 
             grid-template-columns: repeat(8, 50px);
-            border: 2px solid #666;
+            border: 2px solid #333;
             margin: 20px auto;
+            width: fit-content;
         }
         .square { 
             width: 50px; 
@@ -30,203 +24,79 @@
             justify-content: center;
             font-size: 30px;
             cursor: pointer;
-            transition: background-color 0.2s;
         }
-        .light { background-color: #f0d9b5; }
-        .dark { background-color: #b58863; }
-        .selected { background-color: #aaffaa !important; }
-        .valid-move { background-color: #aaff88 !important; }
-        .button-group {
-            margin: 20px 0;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
+        .light { background: #f0d9b5; }
+        .dark { background: #b58863; }
+        .container {
+            text-align: center;
+            padding: 20px;
         }
         button {
+            margin: 10px;
             padding: 10px 20px;
             font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        button:hover {
-            background-color: #f8f9fa;
-            transform: translateY(-1px);
-        }
-        .message {
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            margin: 20px auto;
-            max-width: 400px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .chess-piece {
-            user-select: none;
         }
     </style>
 </head>
 <body>
-    <div id="root">
-        <h1>Loading...</h1>
-    </div>
+    <div id="root"></div>
 
     <script type="text/babel">
-        const App = () => {
-            const [board, setBoard] = React.useState(Array(8).fill().map(() => Array(8).fill(null)));
-            const [selected, setSelected] = React.useState(null);
-            const [message, setMessage] = React.useState('Vælg en stilling for at begynde');
-            const [position, setPosition] = React.useState(null);
-            const [validMoves, setValidMoves] = React.useState([]);
+        function ChessBoard() {
+            const [pieces, setPieces] = React.useState({
+                'e4': '♔',
+                'e6': '♚'
+            });
 
-            const positions = {
-                opposition: {
-                    name: 'Opposition',
-                    pieces: [
-                        { piece: '♔', color: 'white', pos: [3, 4] },
-                        { piece: '♚', color: 'black', pos: [1, 4] }
-                    ],
-                    message: 'Øvelse i opposition: Tving den sorte konge tilbage med din hvide konge'
-                },
-                lucena: {
-                    name: 'Lucena',
-                    pieces: [
-                        { piece: '♔', color: 'white', pos: [6, 4] },
-                        { piece: '♚', color: 'black', pos: [0, 4] },
-                        { piece: '♖', color: 'white', pos: [7, 7] },
-                        { piece: '♜', color: 'black', pos: [0, 7] },
-                        { piece: '♙', color: 'white', pos: [2, 4] }
-                    ],
-                    message: 'Lucena-stillingen: Byg broen med dit tårn og før kongen sikkert frem'
-                }
-            };
-
-            const setPosition = (posName) => {
-                const newBoard = Array(8).fill().map(() => Array(8).fill(null));
-                const pos = positions[posName];
-                
-                pos.pieces.forEach(({piece, color, pos: [row, col]}) => {
-                    newBoard[row][col] = { piece, color };
+            function showOpposition() {
+                setPieces({
+                    'e4': '♔',
+                    'e6': '♚'
                 });
-                
-                setBoard(newBoard);
-                setMessage(pos.message);
-                setSelected(null);
-                setValidMoves([]);
-                setPosition(posName);
-            };
+            }
 
-            const getValidMoves = (row, col, piece) => {
-                const moves = [];
-                const isKing = piece.piece === '♔' || piece.piece === '♚';
-                const isRook = piece.piece === '♖' || piece.piece === '♜';
-                
-                if (isKing) {
-                    for (let i = -1; i <= 1; i++) {
-                        for (let j = -1; j <= 1; j++) {
-                            if (i === 0 && j === 0) continue;
-                            const newRow = row + i;
-                            const newCol = col + j;
-                            if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
-                                if (!board[newRow][newCol] || board[newRow][newCol].color !== piece.color) {
-                                    moves.push([newRow, newCol]);
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                if (isRook) {
-                    // Vandret
-                    for (let i = 0; i < 8; i++) {
-                        if (i !== col && (!board[row][i] || board[row][i].color !== piece.color)) {
-                            moves.push([row, i]);
-                        }
-                    }
-                    // Lodret
-                    for (let i = 0; i < 8; i++) {
-                        if (i !== row && (!board[i][col] || board[i][col].color !== piece.color)) {
-                            moves.push([i, col]);
-                        }
-                    }
-                }
-                
-                return moves;
-            };
+            function showLucena() {
+                setPieces({
+                    'e2': '♔',
+                    'e8': '♚',
+                    'h1': '♖',
+                    'h7': '♜',
+                    'e6': '♙'
+                });
+            }
 
-            const handleClick = (row, col) => {
-                if (selected) {
-                    if (validMoves.some(([r, c]) => r === row && c === col)) {
-                        const newBoard = JSON.parse(JSON.stringify(board));
-                        newBoard[row][col] = newBoard[selected[0]][selected[1]];
-                        newBoard[selected[0]][selected[1]] = null;
-                        setBoard(newBoard);
-                        setMessage('Godt træk! Fortsæt med at øve.');
-                    }
-                    setSelected(null);
-                    setValidMoves([]);
-                } else if (board[row][col] && board[row][col].color === 'white') {
-                    setSelected([row, col]);
-                    setValidMoves(getValidMoves(row, col, board[row][col]));
-                    setMessage('Vælg hvor brikken skal flyttes til');
-                }
-            };
+            function getSquarePiece(file, rank) {
+                const square = String.fromCharCode(97 + file) + (8 - rank);
+                return pieces[square] || '';
+            }
 
             return (
                 <div className="container">
                     <h1>Skak Træner</h1>
                     
-                    <div className="button-group">
-                        <button onClick={() => setPosition('opposition')}>
-                            Opposition-stilling
-                        </button>
-                        <button onClick={() => setPosition('lucena')}>
-                            Lucena-stilling
-                        </button>
+                    <div>
+                        <button onClick={showOpposition}>Opposition</button>
+                        <button onClick={showLucena}>Lucena</button>
                     </div>
 
-                    <div className="message">{message}</div>
-
                     <div className="board">
-                        {board.map((row, i) => 
-                            row.map((piece, j) => (
+                        {Array(8).fill().map((_, rank) => 
+                            Array(8).fill().map((_, file) => (
                                 <div 
-                                    key={`${i}-${j}`}
-                                    className={`
-                                        square 
-                                        ${(i + j) % 2 ? 'dark' : 'light'}
-                                        ${selected && selected[0] === i && selected[1] === j ? 'selected' : ''}
-                                        ${validMoves.some(([r, c]) => r === i && c === j) ? 'valid-move' : ''}
-                                    `}
-                                    onClick={() => handleClick(i, j)}
+                                    key={`${rank}-${file}`}
+                                    className={`square ${(rank + file) % 2 ? 'dark' : 'light'}`}
                                 >
-                                    <span className="chess-piece">
-                                        {piece?.piece}
-                                    </span>
+                                    {getSquarePiece(file, rank)}
                                 </div>
                             ))
                         )}
                     </div>
-
-                    <div className="button-group">
-                        <button onClick={() => position && setPosition(position)}>
-                            Nulstil stilling
-                        </button>
-                    </div>
                 </div>
             );
-        };
+        }
 
-        const root = document.getElementById('root');
-        const reactRoot = ReactDOM.createRoot(root);
-        reactRoot.render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<ChessBoard />);
     </script>
-    
-    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone@7.22.20/babel.min.js"></script>
 </body>
 </html>
