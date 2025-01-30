@@ -3,100 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Skak Træner</title>
-    <!-- Load scripts BEFORE using them -->
-    <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone@7.22.20/babel.min.js"></script>
+    <title>Skak Slutspilstræner</title>
     <style>
-        .board { 
-            display: grid; 
-            grid-template-columns: repeat(8, 50px);
-            border: 2px solid #333;
-            margin: 20px auto;
-            width: fit-content;
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #f0f0f0;
         }
-        .square { 
-            width: 50px; 
-            height: 50px; 
-            display: flex; 
-            align-items: center; 
+        .board {
+            border: 2px solid #333;
+            margin: 20px;
+            background: white;
+        }
+        .row {
+            display: flex;
+        }
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
             justify-content: center;
-            font-size: 30px;
+            align-items: center;
+            font-size: 40px;
             cursor: pointer;
+            user-select: none;
         }
         .light { background: #f0d9b5; }
         .dark { background: #b58863; }
-        .container {
-            text-align: center;
-            padding: 20px;
+        .selected { background: #aaffaa !important; }
+        .valid-move { background: #aaff88 !important; }
+        .controls {
+            margin: 20px;
+            display: flex;
+            gap: 10px;
         }
         button {
-            margin: 10px;
             padding: 10px 20px;
             font-size: 16px;
+            cursor: pointer;
+        }
+        .message {
+            padding: 15px;
+            margin: 10px;
+            background: white;
+            border-radius: 5px;
+            min-height: 50px;
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
+    <h1>Skak Slutspilstræner</h1>
+    
+    <div class="controls">
+        <button onclick="setupPosition('opposition')">Opposition</button>
+        <button onclick="setupPosition('lucena')">Lucena</button>
+        <button onclick="resetPosition()">Nulstil</button>
+    </div>
 
-    <script type="text/babel">
-        function ChessBoard() {
-            const [pieces, setPieces] = React.useState({
-                'e4': '♔',
-                'e6': '♚'
-            });
+    <div id="message" class="message">
+        Vælg en position for at starte
+    </div>
 
-            function showOpposition() {
-                setPieces({
-                    'e4': '♔',
-                    'e6': '♚'
-                });
+    <div id="board" class="board"></div>
+
+    <script>
+        let selectedSquare = null;
+        let currentPosition = null;
+        const board = Array(8).fill().map(() => Array(8).fill(null));
+
+        // Opret skakbræt
+        function createBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+            
+            for (let row = 0; row < 8; row++) {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'row';
+                
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `square ${(row + col) % 2 ? 'dark' : 'light'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    square.onclick = () => handleSquareClick(row, col);
+                    if (board[row][col]) {
+                        square.textContent = board[row][col].piece;
+                    }
+                    rowDiv.appendChild(square);
+                }
+                boardDiv.appendChild(rowDiv);
             }
-
-            function showLucena() {
-                setPieces({
-                    'e2': '♔',
-                    'e8': '♚',
-                    'h1': '♖',
-                    'h7': '♜',
-                    'e6': '♙'
-                });
-            }
-
-            function getSquarePiece(file, rank) {
-                const square = String.fromCharCode(97 + file) + (8 - rank);
-                return pieces[square] || '';
-            }
-
-            return (
-                <div className="container">
-                    <h1>Skak Træner</h1>
-                    
-                    <div>
-                        <button onClick={showOpposition}>Opposition</button>
-                        <button onClick={showLucena}>Lucena</button>
-                    </div>
-
-                    <div className="board">
-                        {Array(8).fill().map((_, rank) => 
-                            Array(8).fill().map((_, file) => (
-                                <div 
-                                    key={`${rank}-${file}`}
-                                    className={`square ${(rank + file) % 2 ? 'dark' : 'light'}`}
-                                >
-                                    {getSquarePiece(file, rank)}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            );
         }
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<ChessBoard />);
+        // Håndter klik på felt
+        function handleSquareClick(row, col) {
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(s => {
+                s.classList.remove('selected', 'valid-move');
+            });
+
+            if (selectedSquare === null) {
+                if (board[row][col] && board[row][col].color === 'white') {
+                    selectedSquare = {row, col};
+                    document.querySelector(`[data-row="${row}"][data-col="${col}"]`)
+                        .classList.add('selected');
+                    showValidMoves(row, col);
+                }
+            } else {
+                if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
+                    movePiece(selectedSquare.row, selectedSquare.col, row, col);
+                    setMessage('Godt træk! Fortsæt øvelsen.');
+                }
+                selectedSquare = null;
+            }
+        }
+
+        // Vis gyldige træk
+        function showValidMoves(row, col) {
+            const piece = board[row][col];
+            if (!piece) return;
+
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (isValidMove(row, col, r, c)) {
+                        document.querySelector(`[data-row="${r}"][data-col="${c}"]`)
+                            .classList.add('valid-move');
+                    }
+                }
+            }
+        }
+
+        // Valider træk
+        function isValidMove(fromRow, fromCol, toRow, toCol) {
+            const piece = board[fromRow][fromCol];
+            if (!piece || piece.color !== 'white') return false;
+            
+            // Konge-træk
+            if (piece.piece === '♔') {
+                const rowDiff = Math.abs(toRow - fromRow);
+                const colDiff = Math.abs(toCol - fromCol);
+                return rowDiff <= 1 && colDiff <= 1;
+            }
+            
+            // Tårn-træk
+            if (piece.piece === '♖') {
+                return fromRow === toRow || fromCol === toCol;
+            }
+
+            return false;
+        }
+
+        // Flyt brik
+        function movePiece(fromRow, fromCol, toRow, toCol) {
+            board[toRow][toCol] = board[fromRow][fromCol];
+            board[fromRow][fromCol] = null;
+            createBoard();
+        }
+
+        // Sæt position
+        function setupPosition(position) {
+            currentPosition = position;
+            clearBoard();
+            
+            if (position === 'opposition') {
+                board[3][4] = {piece: '♔', color: 'white'};
+                board[1][4] = {piece: '♚', color: 'black'};
+                setMessage('Opposition: Tving den sorte konge tilbage ved hjælp af opposition');
+            } else if (position === 'lucena') {
+                board[6][4] = {piece: '♔', color: 'white'};
+                board[0][4] = {piece: '♚', color: 'black'};
+                board[7][7] = {piece: '♖', color: 'white'};
+                board[0][7] = {piece: '♜', color: 'black'};
+                board[2][4] = {piece: '♙', color: 'white'};
+                setMessage('Lucena: Byg broen med dit tårn og før kongen sikkert frem');
+            }
+            
+            createBoard();
+        }
+
+        // Hjælpefunktioner
+        function clearBoard() {
+            for (let i = 0; i < 8; i++) {
+                for (let j = 0; j < 8; j++) {
+                    board[i][j] = null;
+                }
+            }
+        }
+
+        function resetPosition() {
+            if (currentPosition) {
+                setupPosition(currentPosition);
+            }
+        }
+
+        function setMessage(msg) {
+            document.getElementById('message').textContent = msg;
+        }
+
+        // Start med at oprette brættet
+        createBoard();
     </script>
 </body>
 </html>
