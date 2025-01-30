@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skak Træner</title>
+    <!-- Brug specifikke versioner af dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.20/babel.min.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: sans-serif; }
+        .board { display: grid; grid-template-columns: repeat(8, 40px); }
+        .square { 
+            width: 40px; 
+            height: 40px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .light { background-color: #f0d9b5; }
+        .dark { background-color: #b58863; }
+        .selected { background-color: #90EE90; }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <h1>Loading...</h1>
+    </div>
+
+    <script type="text/babel">
+        const App = () => {
+            const [board, setBoard] = React.useState(Array(8).fill().map(() => Array(8).fill(null)));
+            const [selected, setSelected] = React.useState(null);
+
+            React.useEffect(() => {
+                // Sæt initial position
+                const newBoard = Array(8).fill().map(() => Array(8).fill(null));
+                newBoard[3][4] = '♔'; // hvid konge på e5
+                newBoard[1][4] = '♚'; // sort konge på e7
+                setBoard(newBoard);
+            }, []);
+
+            const handleClick = (row, col) => {
+                if (selected) {
+                    const newBoard = [...board];
+                    newBoard[row][col] = board[selected[0]][selected[1]];
+                    newBoard[selected[0]][selected[1]] = null;
+                    setBoard(newBoard);
+                    setSelected(null);
+                } else if (board[row][col]) {
+                    setSelected([row, col]);
+                }
+            };
+
+            return (
+                <div>
+                    <h1>Skak Træner</h1>
+                    <div className="board">
+                        {board.map((row, i) => 
+                            row.map((piece, j) => (
+                                <div 
+                                    key={`${i}-${j}`}
+                                    className={`square ${(i + j) % 2 ? 'dark' : 'light'} 
+                                             ${selected && selected[0] === i && selected[1] === j ? 'selected' : ''}`}
+                                    onClick={() => handleClick(i, j)}
+                                >
+                                    {piece}
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
