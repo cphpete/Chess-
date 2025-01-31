@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 
 const ChessBoard = () => {
   const [position, setPosition] = useState('opposition')
   const [board, setBoard] = useState(Array(8).fill().map(() => Array(8).fill(null)))
   const [selectedSquare, setSelectedSquare] = useState(null)
+  const [message, setMessage] = useState('Vælg en position for at starte')
 
   const pieces = {
     whiteKing: '♔',
@@ -33,20 +34,6 @@ const ChessBoard = () => {
     }
   }
 
-  const handleSquareClick = (row, col) => {
-    if (selectedSquare) {
-      // Flyt brik
-      const newBoard = [...board]
-      newBoard[row][col] = newBoard[selectedSquare.row][selectedSquare.col]
-      newBoard[selectedSquare.row][selectedSquare.col] = null
-      setBoard(newBoard)
-      setSelectedSquare(null)
-    } else if (board[row][col]?.color === 'white') {
-      // Vælg brik
-      setSelectedSquare({ row, col })
-    }
-  }
-
   const setupPosition = (posName) => {
     const newBoard = Array(8).fill().map(() => Array(8).fill(null))
     const pos = positions[posName]
@@ -60,10 +47,28 @@ const ChessBoard = () => {
     
     setBoard(newBoard)
     setPosition(posName)
+    setMessage(pos.description)
+    setSelectedSquare(null)
+  }
+
+  const handleSquareClick = (row, col) => {
+    if (selectedSquare) {
+      // Flyt brik
+      const newBoard = [...board]
+      newBoard[row][col] = newBoard[selectedSquare.row][selectedSquare.col]
+      newBoard[selectedSquare.row][selectedSquare.col] = null
+      setBoard(newBoard)
+      setSelectedSquare(null)
+      setMessage('Godt træk! Fortsæt øvelsen.')
+    } else if (board[row][col]?.color === 'white') {
+      // Vælg brik
+      setSelectedSquare({ row, col })
+      setMessage('Vælg hvor brikken skal flyttes til')
+    }
   }
 
   // Initialiser bræt når komponenten loades
-  React.useEffect(() => {
+  useEffect(() => {
     setupPosition('opposition')
   }, [])
 
@@ -73,6 +78,8 @@ const ChessBoard = () => {
         <button onClick={() => setupPosition('opposition')}>Opposition</button>
         <button onClick={() => setupPosition('lucena')}>Lucena</button>
       </div>
+
+      <div className="message">{message}</div>
 
       <div className="board">
         {board.map((row, i) => (
